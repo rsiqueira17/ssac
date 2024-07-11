@@ -8,7 +8,7 @@ Criacao Banco de dados - Implementando;
 	.Inserir coluna na tabela de OS para controle de OSs concluidas - ok;
 	.Inserir coluna na tabela de OS para gravar o nome do tecnico responsavel pelo servico - ok;
 	.Substituir coluna na tebala de OS de orcamento para aprovado, tendo como premissa que todo novo cadastro sera um orcamento e ao ser aprovado torna-se uma OS - ok;
-	.Inserir messagesbox para confirmacao em caso de tentativa de exclusao;
+	.Inserir messagebox para confirmacao em caso de tentativa de exclusao;
 	.Levantar queries necessarias para atender as rotinas do sistema;
 Criacao GUI inicial - Implementando;
 	.Arquitetura para os, cliente, veiculo e itens - ok;

@@ -3,6 +3,8 @@ from database.run_sql import run_sql
 from class_.client import Client
 from class_.service_order import Service_Order
 from class_.service_order_item import Service_Order_Item
+from class_.company import Company
+from class_.smtp import SMTP
 
 
 # checar como setar a time zone do brasil para a funcao currente_timestamp
@@ -67,9 +69,10 @@ def create_tab_os_items():
             os_codigo INTEGER,
             codigo INTEGER,
             descricao VARCHAR(60),
+            valor_compra REAL,
+            percentual_venda REAL,
             valor REAL,
             quantidade INTEGER,
-            percentual_venda REAL,
             PRIMARY KEY (os_codigo, codigo),
             FOREIGN KEY (
                 os_codigo
@@ -87,18 +90,19 @@ def create_tab_os_items():
 def create_tab_company():
     create = """
         CREATE TABLE IF NOT EXISTS empresa (
-            cnpj VARCHAR(18) PRIMARY KEY,
+            codigo INTEGER PRIMARY KEY,
+            cnpj VARCHAR(18),
             razao_social VARCHAR(60),
+            email VARCHAR(40),
             telefone VARCHAR(13),
             celular_1 VARCHAR(14),
             celular_2 VARCHAR(14),
-            email VARCHAR(40),
+            cep VARCHAR(9),
             endereco VARCHAR(60),
             endereco_numero VARCHAR(10),
             endereco_complemento VARCHAR(50),
             endereco_bairro VARCHAR(50),
             endereco_cidade VARCHAR(50),
-            endereco_uf VARCHAR(2),
             os_numero_inicial INTEGER,
             garantia_km INTEGER,
             garantia_tipo VARCHAR(7),
@@ -141,12 +145,13 @@ def create_tab_supplier():
 def create_tab_smtp():
     create = """
         CREATE TABLE IF NOT EXISTS smtp (
+            codigo INTEGER PRIMARY KEY,
             email VARCHAR(60),
             servidor VARCHAR(60),
             porta INTERGER,
             senha VARCHAR(30),
-            SSL BOOLEAN,
-            TSL BOOLEAN,
+            ssl BOOLEAN,
+            tls BOOLEAN,
             data_criacao TIMESTAMP,
             data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -166,7 +171,7 @@ def new_customer(cliente):
         ) 
         VALUES (
             '{cliente.cpf_cnpj}', '{cliente.nome}', '{cliente.celular}', '{cliente.email}', '{cliente.cep}', '{cliente.endereco}', '{cliente.endereco_numero}', 
-            '{cliente.endereco_complemento}', '{cliente.endereco_bairro}', '{cliente.endereco_cidade}', CURRENT_TIMESTAMP
+            {cliente.endereco_complemento}, '{cliente.endereco_bairro}', '{cliente.endereco_cidade}', CURRENT_TIMESTAMP
         ) ON CONFLICT(cpf_cnpj) DO
         UPDATE SET
             nome = '{cliente.nome}',
@@ -175,7 +180,7 @@ def new_customer(cliente):
             cep = '{cliente.cep}',
             endereco = '{cliente.endereco}',
             endereco_numero = '{cliente.endereco_numero}',
-            endereco_complemento = '{cliente.endereco_complemento}',
+            endereco_complemento = {cliente.endereco_complemento},
             endereco_bairro = '{cliente.endereco_bairro}',
             endereco_cidade = '{cliente.endereco_cidade}',
             data_alteracao = CURRENT_TIMESTAMP
@@ -230,7 +235,7 @@ def new_os_item(os_item):
 
     insert = f"""
         INSERT INTO ordens_servico_itens VALUES (
-            {os_item.codigo_os}, {os_item.codigo}, '{os_item.descricao}', {os_item.valor}, {os_item.quantidade}, {os_item.percentual_venda}
+            {os_item.codigo_os}, {os_item.codigo}, '{os_item.descricao}', {os_item.valor_compra}, {os_item.percentual_venda}, {os_item.valor}, {os_item.quantidade}
         );
     """
 
@@ -239,69 +244,69 @@ def new_os_item(os_item):
     return
 
 
-def update_customer(cliente):
-    update = f"""
-        UPDATE
-            clientes
-        SET
-            nome = {cliente.nome},
-            celular = {cliente.celular},
-            email = {cliente.email},
-            endereco = {cliente.endereco},
-            endereco_numero = {cliente.endereco_numero},
-            endereco_complemento = {cliente.endereco_complemento},
-            endereco_bairro = {cliente.endereco_bairro},
-            endereco_cidade = {cliente.endereco_cidade},
-            endereco_uf = {cliente.endereco_uf},
+def new_company(empresa):
+    create_tab_company()
+
+    insert = f"""
+        INSERT INTO empresa (
+            codigo, cnpj, razao_social, email, telefone, celular_1, celular_2, cep, endereco, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, os_numero_inicial,
+            garantia_km, garantia_tipo, garantia_tipo_tempo, logo_arquivo, local_exportacao_os, data_criacao
+        ) 
+        VALUES (
+            1, '{empresa.cnpj}', '{empresa.razao_social}', '{empresa.email}', '{empresa.telefone}', '{empresa.celular_1}', '{empresa.celular_2}', '{empresa.cep}', '{empresa.endereco}', 
+            '{empresa.endereco_numero}', {empresa.endereco_complemento}, '{empresa.endereco_bairro}', '{empresa.endereco_cidade}', {empresa.os_numero_inicial}, '{empresa.garantia_km}',
+            '{empresa.garantia_tipo}', {empresa.garantia_tempo}, '{empresa.logo_arquivo}', '{empresa.local_os}', CURRENT_TIMESTAMP
+        ) ON CONFLICT(codigo) DO
+        UPDATE SET
+            cnpj = '{empresa.cnpj}',
+            razao_social = '{empresa.razao_social}',
+            email = '{empresa.email}',
+            telefone = '{empresa.telefone}',
+            celular_1 = '{empresa.celular_1}',
+            celular_2 =  '{empresa.celular_2}',
+            cep = '{empresa.cep}',
+            endereco = '{empresa.endereco}',
+            endereco_numero = '{empresa.endereco_numero}',
+            endereco_complemento = {empresa.endereco_complemento},
+            endereco_bairro = '{empresa.endereco_bairro}',
+            endereco_cidade = '{empresa.endereco_cidade}',
+            os_numero_inicial = {empresa.os_numero_inicial},
+            garantia_km = '{empresa.garantia_km}',
+            garantia_tipo = '{empresa.garantia_tipo}',
+            garantia_tipo_tempo = {empresa.garantia_tempo},
+            logo_arquivo = '{empresa.logo_arquivo}',
+            local_exportacao_os = '{empresa.local_os}',
             data_alteracao = CURRENT_TIMESTAMP
         WHERE
-            cpf_cnpj = {cliente.cpf_cnpj}
+            codigo = 1;
     """
 
-    run_sql(update)
+    run_sql(insert)
 
     return
 
 
-def update_os(os):
-    update = f"""
-        UPDATE
-            ordens_servico
-        SET
-            data = {os.data},
-            cliente_cpf_cnpj = {os.cliente_cpf_cnpj},
-            veiculo_modelo = {os.veiculo_modelo},
-            veiculo_placa = {os.veiculo_placa},
-            veiculo_versao = {os.veiculo_versao},
-            veiculo_fabricante = {os.veiculo_fabricante},
-            veiculo_ano = {os.veiculo_ano},
-            veiculo_kilometragem = {os.veiculo_kilometragem},
-            orcamento = {os.orcamento},
-            valor = {os.valor},
-            data_alteracao = CURRENT_TIMESTAMP
-        WHERE
-            numero = {os.numero}
+def new_smtp(smtp):
+    create_tab_smtp()
+
+    insert = f"""
+        INSERT INTO smtp (
+            codigo, email, servidor, porta, senha, ssl, tls, data_criacao
+        )
+        VALUES (
+            1, '{smtp.email}', '{smtp.servidor}', {smtp.porta}, '{smtp.senha}', {smtp.ssl}, {smtp.tls}, CURRENT_TIMESTAMP
+        ) ON CONFLICT(codigo) DO
+        UPDATE SET
+            email = '{smtp.email}',
+            servidor = '{smtp.servidor}',
+            porta = {smtp.porta},
+            senha = '{smtp.senha}',
+            ssl = {smtp.ssl},
+            tls = {smtp.tls},
+            data_alteracao = CURRENT_TIMESTAMP;
     """
 
-    run_sql(update)
-
-    return
-
-
-def update_os_item(os_item):
-    update = f"""
-        UPDATE
-            ordens_servico_itens
-        SET
-            descricao = {os_item.descricao},
-            valor = {os_item.valor},
-            quantidade = {os_item.quantidade},
-        WHERE
-            os_codigo = {os_item.os_codigo},
-            codigo = {os_item.codigo}
-    """
-
-    run_sql(update)
+    run_sql(insert)
 
     return
 
@@ -313,10 +318,10 @@ def get_customer(cpf_cnpj):
         FROM
             clientes
         WHERE
-            cpf_cnpj = {cpf_cnpj}
+            cpf_cnpj = '{cpf_cnpj}'
     """
 
-    data = Client(*run_sql(select))
+    data = Client(*run_sql(select)[0][:10])
 
     return data
 
@@ -347,7 +352,7 @@ def get_os(numero):
             numero = {numero}
     """
 
-    data = Service_Order(*run_sql(select))
+    data = Service_Order(*run_sql(select)[0][1:14])
 
     return data
 
@@ -363,7 +368,7 @@ def get_oss():
     data = []
     
     for os in run_sql(select):
-        data.append(Service_Order(*os))
+        data.append(Service_Order(*os[1:14]))
 
     return data
 
@@ -371,9 +376,9 @@ def get_oss():
 def get_os_item(numero, item):
     select = f"""
         SELECT
-            *
+            OSI.*
         FROM
-            ordens_servico_itens
+            ordens_servico_itens OSI
         INNER JOIN (
             SELECT
                 *
@@ -381,12 +386,12 @@ def get_os_item(numero, item):
                 ordens_servico
             WHERE
                 numero = {numero}
-        )
+        ) OS ON OSI.os_codigo = OSI.codigo
         WHERE
             codigo = {item}
     """
 
-    data = Service_Order_Item(*run_sql(select))
+    data = Service_Order_Item(*run_sql(select)[0])
 
     return data
 
@@ -394,9 +399,15 @@ def get_os_item(numero, item):
 def get_os_items(numero):
     select = f"""
         SELECT
-            *
+            OSI.os_codigo,
+            OSI.codigo,
+            OSI.descricao,
+            OSI.valor_compra,
+            OSI.valor,
+            OSI.quantidade,
+            OSI.percentual_venda
         FROM
-            ordens_servico_itens
+            ordens_servico_itens OSI
         INNER JOIN (
             SELECT
                 *
@@ -404,12 +415,43 @@ def get_os_items(numero):
                 ordens_servico
             WHERE
                 numero = {numero}
-        )
+        ) OS ON OSI.os_codigo = OS.codigo
     """
 
     data = []
     
     for os_itens in run_sql(select):
         data.append(Service_Order_Item(*os_itens))
+
+    return data
+
+
+def get_company():
+    select = """
+        SELECT
+            *
+        FROM
+            empresa
+    """
+    
+    data = Company(*run_sql(select)[0][1:19])
+
+    return data
+
+
+def get_smtp():
+    select = """
+        SELECT
+            email,
+            servidor,
+            senha,
+            ssl,
+            tls,
+            porta
+        FROM
+            smtp
+    """
+    
+    data = SMTP(*run_sql(select)[0])
 
     return data

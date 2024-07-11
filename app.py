@@ -1,9 +1,9 @@
 from tkinter import *
-from interface.home import Os_Window
-from interface.custom import Custom_GUI
-from interface.configuration import Company_Window
-from interface.smtp import SMTP_Window
-from interface.reports import Reports_Window
+from gui_.home import Os_Window
+from gui_.custom import Custom_GUI
+from gui_.configuration import Company_Window
+from gui_.smtp import SMTP_Window
+from gui_.reports import Reports_Window
 
 
 # funcoes para chamadas as janelas adicionais
